@@ -1,27 +1,11 @@
-'''
-
-UDP Telemetry Receiver and controller.
-
-This script receives the information from the simulator (the telemetry)
-picks only the data that corresponds to one of the tanks, and sends
-a command to the simulator to control the tank.
-
-'''
-
 import numpy as np
-
 import time
 import datetime
 from struct import *
-
 import sys, select
-
 import socket
-
 from TelemetryDictionary import telemetrydirs as td
-
 import math
-
 from Fps import Fps
 
 # This is the port where the simulator is waiting for commands
@@ -33,17 +17,17 @@ controlport = 4501
 ctrl_server_address = (ip, controlport)
 
 
-def send_command(timer, controllingid, thrust, roll, pitch, yaw, precesion, bank, faction, command):
-    #    controllingid=1
-    #    thrust=10.0
-    #    roll=1.0
-    #    pitch=0.0
-    #    yaw=0.0
-    #    precesion=0.0
-    #    bank=0.0
-    #    faction=1
-    #    #timer=1
+def newton_raphson(f, df, x0, tol=1e-6, max_iter=1000, e=1e-6):
+    x = x0
+    for i in range(max_iter):
+        fx = f(x)
+        dfx = df(x)
+        if np.abs(fx) < tol:
+            return x
+        x = x - fx / (dfx + e)
+    return x
 
+def send_command(timer, controllingid, thrust, roll, pitch, yaw, precesion, bank, faction, command):
     spawnid = 0
     typeofisland = 0
     x = 0.0
@@ -127,9 +111,7 @@ def gimmesomething(ser):
 # Sensor Recording
 ts = time.time()
 st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d-%H-%M-%S')
-f = open('./data/sensor.' + st + '.dat', 'w')
-out = open("./scripts/pitch2.csv", 'w')
-out.write("health,power,bearing,x,y,z,r1,r2,r3,r4,r5,r6,r7,r8,r9,r10,r11,r12\n")
+f = open('../wakuseibokan/data/sensor.' + st + '.dat', 'w')
 
 x = []
 y = []
@@ -146,6 +128,51 @@ bank = 1
 precesion = 1
 roll = 1
 
+g = -9.81
+dx = 0
+
+def f_p(x):
+    global dx, g
+    return 2 + np.tan(x) * dx - 9.81 / 2 * (dx / (600 * np.cos(x)))**2
+
+def df_p(x):
+    global dx, g
+    return dx * (1 / np.cos(x)**2) + 2 * (g) * (dx / 600)**2 * (np.tan(x) / np.cos(x)**2)
+
+def f_damp_o(x):
+    global dx, b, g
+    print(f"f: {dx * b / (600 * np.sqrt(1 - np.sin(x)**2) - 1)}")
+    return np.sin(x) - dx * g / (2600 * b) * np.log(dx * b / (600 * np.sqrt(np.cos(x)**2) - 1)) + (2 * b + g) / 2600
+
+def df_damp_o(x):
+    global dx, g
+    return np.cos(x) - (dx * g * np.sin(2 * x)) / (26 * b * np.cos(x) * (600 * np.cos(x) - 1))
+
+def f_damp(x):
+    global dx, b, g
+    return 2 + 1 / b * (g / b + 600 * np.sin(x)) * (2 - dx * b / (600 * np.cos(x) + 1)) + (g / b**2) * (np.log(dx * b / (600 * np.cos(x) - 1)))
+
+def df_damp(x):
+    global dx, g
+    return -(600 * dx * np.sin(x) * (g / b + 600 * np.sin(x))) / ((600 * np.cos(x) + 1)**2) + (600 * np.cos(x) * (2 - (dx * b) / (600 * np.cos(x) + 1))) / b + (600 * g * np.sin(x)) / (b**2 * (600 * np.cos(x) - 1))
+
+def pol_ang(dx):
+    return (46444912318939 / 39968822186453183063040000000000000000000) * dx**9 - (7781440178087 / 483182086393292832000000000000000000) * dx**8 + (316129964218830149 / 3330735182204431921920000000000000000) * dx**7 - (551924899814085793 / 1784322419038088529600000000000000) * dx**6 + (173388917298542880161 / 285491587046094164736000000000000) * dx**5 - (87408225930600458011 / 118954827935872568640000000000) * dx**4 + (1588299317143465375357 / 2938883984298028166400000000) * dx**3 - (7279883547186637908271 / 31225642333166549268000000) * dx**2 + (768588293075311340843 / 13010684305486062195000) * dx - (152727869843707009 / 17330248825156260)
+
+def calculate_roll(bearing, target_angle):
+    angle_diff = target_angle - bearing
+    
+    if angle_diff > 180:
+        angle_diff -= 360
+    elif angle_diff < -180:
+        angle_diff += 360
+    
+    roll = angle_diff * 0.5
+    
+    return roll
+
+
+swerve = False
 ot_pos = None
 
 while True:
@@ -153,22 +180,15 @@ while True:
     fps.steptoc()
     data, address = sock.recvfrom(length)
 
-    #    print(f"data: {data}")
-
     print(f"Fps: {fps.fps}")
 
     # Take care of the latency
     if len(data) > 0 and len(data) == length:
-        # is  a valid message struct
+        # is a valid message struct
         new_values = unpack(unpackcode, data)
 
         if int(new_values[td['number']]) != tank:
             ot_pos = (float(new_values[td['x']]), float(new_values[td['z']]))
-            
-        if int(new_values[td['number']]) == tank:
-            out.write(
-                f"{new_values[2]},{new_values[3]},{new_values[4]},{new_values[5]},{new_values[6]},{new_values[7]},{new_values[8]},{new_values[9]},{new_values[10]},{new_values[11]},{new_values[12]},{new_values[13]},{new_values[14]},{new_values[15]},{new_values[16]},{new_values[17]},{new_values[18]},{new_values[19]}\n")
-        # out.flush()
 
         # The
         if int(new_values[td['number']]) == tank:
@@ -184,36 +204,55 @@ while True:
             vec2d = (float(new_values[td['x']]), float(new_values[td['z']]))
 
             ang = 0
-            polardistance = math.sqrt(vec2d[0] ** 2 + vec2d[1] ** 2)
+            polardistance = np.sqrt(vec2d[0] ** 2 + vec2d[1] ** 2)
             if ot_pos:
-                dist = math.sqrt((vec2d[0] - ot_pos[0])**2 + (vec2d[1] - ot_pos[1])**2)
-                ang = (180 * math.atan2(ot_pos[1] - vec2d[1], ot_pos[0] - vec2d[0]) / math.pi) - 90
+                dist = np.sqrt((vec2d[0] - ot_pos[0])**2 + (vec2d[1] - ot_pos[1])**2)
+                dx = np.sqrt((vec2d[0]-ot_pos[0])**2 + (vec2d[1]-ot_pos[1])**2)
+                ang = (180 * np.arctan2(ot_pos[1] - vec2d[1], ot_pos[0] - vec2d[0]) / np.pi) - 90
                 if ang < 0:
                     ang += 360
 
             print(f"({vec2d[0]}, {vec2d[1]})")
-                               
+
             bearing = new_values[td["bearing"]]
 
             print(polardistance)
 
-            if polardistance < 1700:
-                thrust = 0.0
-            else:
-                thrust = 0.0
+            if np.random.rand() <= 0.005:
+                swerve = not swerve
 
-            roll = 0
-            pitch = 0
-            yaw = 0
+            if np.abs(new_values[td["x"]]) >= 1300:
+                mu = 270  # Mean
+                sigma = 30  # Standard deviation (adjust as needed)
+                to = 270 if new_values[td["x"]] < 1300 else 90 #np.random.normal(mu, sigma)
+                roll = calculate_roll(bearing, to)
+            elif np.abs(new_values[td["z"]]) >= 1300:
+                mu = 180 if new_values[td["z"]] < 1300 else 0
+                sigma = 30
+                to = 180 if new_values[td["z"]] > 1300 else 0 # np.random.normal(mu, sigma)
+                roll = calculate_roll(bearing, to)
+            else:
+                roll = calculate_roll(bearing, ang + 90 if swerve else ang - 90)
+
+
             precesion = (ang - bearing) % 360
+            thrust = 50.0
+
+            if dx > 0:
+                pitch = pol_ang(dx)
+            else:
+                pitch = 0
+
+            print(f"pitch = {pitch}")
+            print(f"vec2d = {vec2d}")
+            print(f"ot_pos = {ot_pos}")
+            print(f"ang = {ang}")
+
+            yaw = 0
             bank = 0
 
-            # Analyze the data to determine what to do.
-            # Do something
-            # send_command(new_values[td["timer"]], tank, thrust, roll, pitch, yaw, precesion, bank, 1, 0)
+            send_command(new_values[td["timer"]], tank, thrust, roll, pitch, yaw, precesion, bank, 1, 0)
 
 f.close()
-out.close()
 
 print('Everything successfully closed.')
-
