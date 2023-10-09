@@ -11,8 +11,6 @@ from prediction import predict
 # TANK SELECTION
 TANK = 1
 
-
-
 # This is the port where the simulator is waiting for commands
 # The structure is given in ../commandorder.h/CommandOrder
 ctrlsock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -129,8 +127,7 @@ pitch = 1
 yaw = 1
 bank = 1
 precesion = 1
-roll = 0
-thrust = 40
+roll = 1
 
 g = -9.81
 dx = 0
@@ -180,16 +177,16 @@ def calculate_roll(bearing, target_angle):
 
 
 def prob_fire(dx):
-    return np.cbrt(dx/-3600)+1
+    return np.cbrt(dx / -3600) + 1
+
 
 swerve = False
 ot_pos = None
 ot_pred = None
 bullets = 1000
 timer = 0
-thrust = 20
+thrust = 0
 allowed_fire = True
-
 
 while True:
     fps.steptoc()
@@ -273,14 +270,17 @@ while True:
 
             fire = 0
 
+            if new_values[td['timer']] > 40:
+                thrust = 50
 
-            if timer > 0:
-                timer -= 1
-            elif np.random.rand() <= 0.025:
-                timer = 5
-                thrust = -thrust
-            else:
-                thrust = 20
+            if new_values[td['timer']] > 100:
+                if timer > 0:
+                    timer -= 1
+                elif np.random.rand() <= 0.025:
+                    timer = 5
+                    thrust = -thrust
+                else:
+                    thrust = 20
             # if new_values[td["timer"]] % 250 <= 50:
             #     thrust = 0
             #     if new_values[td["timer"]] % 250 > 40:
@@ -293,7 +293,7 @@ while True:
                 elif np.random.rand() <= prob_fire(dx):
                     fire = 11
                     bullets -= 1
-            elif np.random.rand() <= prob_fire(dx):
+            elif np.random.rand() <= prob_fire(dx) and allowed_fire:
                 fire = 11
                 bullets -= 1
 
