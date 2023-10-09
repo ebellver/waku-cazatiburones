@@ -95,10 +95,6 @@ def gimmesomething(ser):
             break
     return line
 
-ts = time.time()
-st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d-%H-%M-%S')
-f = open('./data/circle.' + st + '.dat', 'w')
-
 # Which tank I AM.
 tank = 2
 
@@ -124,10 +120,6 @@ while True:
         new_values = unpack(unpackcode, data)
         # The
         if int(new_values[td['number']]) == tank:
-            f.write(str(new_values[td['timer']]) + ', ' + str(new_values[td['bearing']]) + ', ' + str(
-                new_values[td['x']]) + ', ' + str(new_values[td['z']]) + '\n')
-            f.flush()
-
             thrust = 20
             send_command(new_values[td["timer"]], tank, thrust, roll, pitch, yaw, precesion, bank, 1, 0)
 

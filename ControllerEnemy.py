@@ -9,7 +9,7 @@ from TelemetryDictionary import telemetrydirs as td
 from prediction import predict
 
 # TANK SELECTION
-TANK = 1
+TANK = 2
 
 
 

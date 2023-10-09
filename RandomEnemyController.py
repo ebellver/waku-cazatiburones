@@ -97,10 +97,6 @@ def gimmesomething(ser):
     return line
 
 
-# Sensor Recording
-ts = time.time()
-st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d-%H-%M-%S')
-f = open('./data/random.' + st + '.dat', 'w')
 
 b = []
 x = []
@@ -142,9 +138,6 @@ while True:
         new_values = unpack(unpackcode, data)
         # The
         if int(new_values[td['number']]) == tank:
-            f.write(str(new_values[td['timer']]) + ', ' + str(new_values[td['bearing']]) + ', ' + str(new_values[td['x']]) + ', ' + str(new_values[td['z']]) + '\n')
-            f.flush()
-
             if new_values[td['timer']] % 30 == 0:
                 thrust = np.random.uniform(-40, 40)
 

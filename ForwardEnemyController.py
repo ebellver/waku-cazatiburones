@@ -97,11 +97,6 @@ def gimmesomething(ser):
     return line
 
 
-# Sensor Recording
-ts = time.time()
-st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d-%H-%M-%S')
-f = open('./data/forward.' + st + '.dat', 'w')
-
 b = []
 x = []
 z = []
@@ -141,9 +136,6 @@ while True:
         new_values = unpack(unpackcode, data)
         # The
         if int(new_values[td['number']]) == tank:
-            f.write(str(new_values[td['timer']]) + ', ' + str(new_values[td['bearing']]) + ', ' + str(new_values[td['x']]) + ', ' + str(new_values[td['z']]) + '\n')
-            f.flush()
-
             b.append(float(new_values[td['bearing']]))
             x.append(float(new_values[td['x']]))
             z.append(float(new_values[td['z']]))
@@ -158,7 +150,5 @@ while True:
             print(f"({vec2d[0]}, {vec2d[1]})")
 
             send_command(new_values[td["timer"]], tank, THRUST, roll, pitch, yaw, precesion, bank, 1, 0)
-
-f.close()
 
 print('Everything successfully closed.')
