@@ -6,7 +6,6 @@ import sys, select
 import socket
 from TelemetryDictionary import telemetrydirs as td
 import math
-from Fps import Fps
 
 # This is the port where the simulator is waiting for commands
 # The structure is given in ../commandorder.h/CommandOrder
@@ -68,9 +67,9 @@ if (len(sys.argv) >= 2):
         data2 = int(sys.argv[2])
         data3 = int(sys.argv[3])
     except:
-        data1 = telemetrydirs[sys.argv[1]]
-        data2 = telemetrydirs[sys.argv[2]]
-        data3 = telemetrydirs[sys.argv[3]]
+        data1 = td[sys.argv[1]]
+        data2 = td[sys.argv[2]]
+        data3 = td[sys.argv[3]]
         pass
 
 if (len(sys.argv) >= 5):
@@ -96,22 +95,9 @@ def gimmesomething(ser):
             break
     return line
 
-
-# Sensor Recording
 ts = time.time()
 st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d-%H-%M-%S')
-f = open('../wakuseibokan/data/sensor.' + st + '.dat', 'w')
-
-b = []
-x = []
-z = []
-
-b_o = []
-x_o = []
-z_o = []
-
-fps = Fps()
-fps.tic()
+f = open('./data/circle.' + st + '.dat', 'w')
 
 # Which tank I AM.
 tank = 2
@@ -130,10 +116,7 @@ ot_pos = None
 
 while True:
     # read
-    fps.steptoc()
     data, address = sock.recvfrom(length)
-
-    print(f"Fps: {fps.fps}")
 
     # Take care of the latency
     if len(data) > 0 and len(data) == length:
@@ -141,28 +124,11 @@ while True:
         new_values = unpack(unpackcode, data)
         # The
         if int(new_values[td['number']]) == tank:
-
-            f.write(str(new_values[0]) + ',' + str(new_values[1]) + ',' + str(new_values[2]) + ',' + str(
-                new_values[3]) + ',' + str(new_values[4]) + ',' + str(new_values[6]) + '\n')
+            f.write(str(new_values[td['timer']]) + ', ' + str(new_values[td['bearing']]) + ', ' + str(
+                new_values[td['x']]) + ', ' + str(new_values[td['z']]) + '\n')
             f.flush()
 
-            b.append(float(new_values[td['bearing']]))
-            x.append(float(new_values[td['x']]))
-            z.append(float(new_values[td['z']]))
-
-
-
-            vec2d = (float(x[-1]), float(z[-1]))
-
-            THRUST = 15
-
-            ang = 0
-            polardistance = np.sqrt(vec2d[0] ** 2 + vec2d[1] ** 2)
-
-            print(f"({vec2d[0]}, {vec2d[1]})")
-
-            send_command(new_values[td["timer"]], tank, THRUST, roll, pitch, yaw, precesion, bank, 1, 0)
-
-f.close()
+            thrust = 20
+            send_command(new_values[td["timer"]], tank, thrust, roll, pitch, yaw, precesion, bank, 1, 0)
 
 print('Everything successfully closed.')

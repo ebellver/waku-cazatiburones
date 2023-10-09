@@ -100,7 +100,7 @@ def gimmesomething(ser):
 # Sensor Recording
 ts = time.time()
 st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d-%H-%M-%S')
-f = open('./data/forward.' + st + '.dat', 'w')
+f = open('./data/random.' + st + '.dat', 'w')
 
 b = []
 x = []
@@ -120,7 +120,8 @@ pitch = 1
 yaw = 1
 bank = 1
 precesion = 1
-roll = 0
+roll = 1
+thrust = 1
 
 g = -9.81
 dx = 0
@@ -144,20 +145,13 @@ while True:
             f.write(str(new_values[td['timer']]) + ', ' + str(new_values[td['bearing']]) + ', ' + str(new_values[td['x']]) + ', ' + str(new_values[td['z']]) + '\n')
             f.flush()
 
-            b.append(float(new_values[td['bearing']]))
-            x.append(float(new_values[td['x']]))
-            z.append(float(new_values[td['z']]))
+            if new_values[td['timer']] % 30 == 0:
+                thrust = np.random.uniform(-40, 40)
 
-            vec2d = (float(x[-1]), float(z[-1]))
+            if new_values[td['timer']] % 15 == 0:
+                roll = np.random.uniform(-70, 70)
 
-            THRUST = 30
-
-            ang = 0
-            polardistance = np.sqrt(vec2d[0] ** 2 + vec2d[1] ** 2)
-
-            print(f"({vec2d[0]}, {vec2d[1]})")
-
-            send_command(new_values[td["timer"]], tank, THRUST, roll, pitch, yaw, precesion, bank, 1, 0)
+            send_command(new_values[td["timer"]], tank, thrust, roll, pitch, yaw, precesion, bank, 1, 0)
 
 f.close()
 

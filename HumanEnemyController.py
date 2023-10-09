@@ -157,7 +157,7 @@ while True:
 
             print(f"({vec2d[0]}, {vec2d[1]})")
 
-            send_command(new_values[td["timer"]], tank, THRUST, roll, pitch, yaw, precesion, bank, 1, 0)
+            # send_command(new_values[td["timer"]], tank, THRUST, roll, pitch, yaw, precesion, bank, 1, 0)
 
 f.close()
 

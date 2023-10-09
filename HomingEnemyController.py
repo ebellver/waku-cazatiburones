@@ -100,7 +100,7 @@ def gimmesomething(ser):
 # Sensor Recording
 ts = time.time()
 st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d-%H-%M-%S')
-f = open('./data/forward.' + st + '.dat', 'w')
+f = open('../wakuseibokan/data/sensor.' + st + '.dat', 'w')
 
 b = []
 x = []
@@ -120,7 +120,7 @@ pitch = 1
 yaw = 1
 bank = 1
 precesion = 1
-roll = 0
+roll = 30
 
 g = -9.81
 dx = 0
@@ -141,16 +141,20 @@ while True:
         new_values = unpack(unpackcode, data)
         # The
         if int(new_values[td['number']]) == tank:
-            f.write(str(new_values[td['timer']]) + ', ' + str(new_values[td['bearing']]) + ', ' + str(new_values[td['x']]) + ', ' + str(new_values[td['z']]) + '\n')
+
+            f.write(str(new_values[0]) + ',' + str(new_values[1]) + ',' + str(new_values[2]) + ',' + str(
+                new_values[3]) + ',' + str(new_values[4]) + ',' + str(new_values[6]) + '\n')
             f.flush()
 
             b.append(float(new_values[td['bearing']]))
             x.append(float(new_values[td['x']]))
             z.append(float(new_values[td['z']]))
 
+
+
             vec2d = (float(x[-1]), float(z[-1]))
 
-            THRUST = 30
+            THRUST = 15
 
             ang = 0
             polardistance = np.sqrt(vec2d[0] ** 2 + vec2d[1] ** 2)
