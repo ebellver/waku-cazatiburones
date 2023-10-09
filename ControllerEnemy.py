@@ -219,8 +219,8 @@ while True:
 
             vec2d = (float(x[-1]), float(z[-1]))
 
-            if new_values[td['timer']] % 10 == 0:
-                thrust = np.random.uniform(-40, 40)
+            # if new_values[td['timer']] % 10 == 0:
+            #     thrust = np.random.uniform(-40, 40)
 
             ang = 0
             target = ot_pos
@@ -251,7 +251,12 @@ while True:
                 to = 180 if z[-1] > 1300 else 0
                 roll = calculate_roll(bearing, to)
             else:
-                roll = calculate_roll(bearing, ang + 90 if swerve else ang - 90)
+                if dx < 400:
+                    change = np.random.normal(100, 5)
+                else:
+                    change = np.random.normal(90, 5)
+                # roll = calculate_roll(bearing, ang + 90 if swerve else ang - 90)
+                roll = calculate_roll(bearing, ang + change if swerve else ang - change)
                 # roll = calculate_roll(bearing, ang + 90)
                 # print(f"swerve: {swerve}", f"roll: {roll}", f"bearing: {bearing}", f"ang: {(ang + 90 if swerve else ang - 90) % 360}")
 
@@ -282,12 +287,15 @@ while True:
             #         fire = 11
 
             if np.abs(roll) < 5 and allowed_fire:
-                if bullets > 500:
+                if bullets > 400:
                     fire = 11
                     bullets -= 1
                 elif np.random.rand() <= prob_fire(dx):
                     fire = 11
                     bullets -= 1
+            elif np.random.rand() <= prob_fire(dx):
+                fire = 11
+                bullets -= 1
 
             if 25 < new_values[td["timer"]] <= 30 + 170 * prob_fire(dx):
                 fire = 11
